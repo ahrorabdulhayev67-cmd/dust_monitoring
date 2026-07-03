@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toshkent — Havo Sifati</title>
+<style>
+/* ── TOKENS ─────────────────────────────────────────── */
+:root {
+  --c-bg:        #0b0f1a;
+  --c-surface:   #111827;
+  --c-surface2:  #1a2235;
+  --c-border:    #1e2d45;
+  --c-border2:   #243552;
+  --c-text:      #e2e8f0;
+  --c-muted:     #64748b;
+  --c-sub:       #94a3b8;
+  --c-accent:    #38bdf8;
+  --c-accent2:   #0ea5e9;
+  --radius:      12px;
+  --radius-sm:   8px;
+  --font:        -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:   'SF Mono', 'Fira Code', monospace;
+
+  /* AQI colors */
+  --aqi-good:      #22c55e;
+  --aqi-moderate:  #f59e0b;
+  --aqi-sensitive: #f97316;
+  --aqi-bad:       #ef4444;
+  --aqi-hazard:    #a855f7;
+}
+[data-theme="light"] {
+  --c-bg:        #f0f4f8;
+  --c-surface:   #ffffff;
+  --c-surface2:  #f8fafc;
+  --c-border:    #e2e8f0;
+  --c-border2:   #cbd5e1;
+  --c-text:      #0f172a;
+  --c-muted:     #94a3b8;
+  --c-sub:       #475569;
+  --c-accent:    #0284c7;
+  --c-accent2:   #0369a1;
+}
+
+/* ── RESET ──────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+body {
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font);
+  min-height: 100vh;
+  transition: background .3s, color .3s;
+}
+a { text-decoration: none; color: inherit }
+
+/* ── LAYOUT ─────────────────────────────────────────── */
+.wrap { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem 3rem }
+
+/* ── HEADER ─────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 0 1rem;
+  border-bottom: 1px solid var(--c-border);
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.header-left h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  color: var(--c-text);
+}
+.header-left p {
+  font-size: .72rem;
+  color: var(--c-muted);
+  margin-top: .2rem;
+  font-family: var(--font-mono);
+  letter-spacing: .05em;
+}
+.header-right { display: flex; align-items: center; gap: .75rem; flex-shrink: 0 }
+
+/* Lang switcher */
+.lang { display: flex; gap: 3px }
+.lang button {
+  padding: 4px 10px;
+  border: 1px solid var(--c-border2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--c-muted);
+  font-size: .72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: var(--font);
+}
+.lang button.active {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  color: #fff;
+}
+
+/* Theme toggle */
+.theme-btn {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--c-border2);
+  background: transparent;
+  color: var(--c-muted);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+  transition: all .15s;
+}
+.theme-btn:hover { border-color: var(--c-accent); color: var(--c-accent) }
+
+/* Live dot */
+.live {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .72rem; color: var(--c-muted);
+  font-family: var(--font-mono);
+}
+.live span {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #22c55e;
+  animation: blink 2s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+/* ── SECTION LABEL ──────────────────────────────────── */
+.slabel {
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+  margin-bottom: .85rem;
+}
+
+/* ── CARD ───────────────────────────────────────────── */
+.card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: background .3s, border-color .3s;
+}
+.card-hd {
+  padding: .75rem 1rem;
+  border-bottom: 1px solid var(--c-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-hd-title {
+  font-size: .75rem;
+  font-weight: 500;
+  color: var(--c-sub);
+  display: flex; align-items: center; gap: .4rem;
+}
+.card-hd-title .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--c-accent);
+  animation: blink 2s infinite;
+}
+.card-hd-meta { font-size: .68rem; color: var(--c-muted); font-family: var(--font-mono) }
+
+/* ── CURRENT GRID ───────────────────────────────────── */
+.current-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: .85rem;
+  margin-bottom: 1.5rem;
+}
+@media(max-width:900px){ .current-grid{ grid-template-columns: repeat(3,1fr) } }
+@media(max-width:600px){ .current-grid{ grid-template-columns: repeat(2,1fr) } }
+
+.metric {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem .9rem;
+  transition: background .3s, border-color .3s;
+}
+.metric-label {
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+  margin-bottom: .5rem;
+}
+.metric-value {
+  font-size: 2rem;
+  font-weight: 300;
+  line-height: 1;
+  font-family: var(--font-mono);
+  color: var(--c-text);
+}
+.metric-unit { font-size: .7rem; color: var(--c-muted); margin-top: .3rem }
+.metric-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--c-border2);
+  margin-top: .85rem;
+  overflow: hidden;
+}
+.metric-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .6s ease;
+}
+.metric-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  margin-top: .5rem;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: .65rem;
+  font-weight: 600;
+}
+
+/* ── ALERT ──────────────────────────────────────────── */
+.alert {
+  border-radius: var(--radius);
+  padding: .9rem 1.1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: .85rem;
+  border: 1px solid;
+}
+.alert-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px }
+.alert-title { font-size: .85rem; font-weight: 600; margin-bottom: .2rem }
+.alert-desc { font-size: .75rem; line-height: 1.55; color: var(--c-sub) }
+
+/* ── FORECAST GRID ──────────────────────────────────── */
+.forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .85rem;
+  margin-bottom: 1.5rem;
+}
+@media(max-width:600px){ .forecast-grid{ grid-template-columns: 1fr } }
+
+.fcard {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  transition: background .3s, border-color .3s;
+}
+.fcard-time {
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+  margin-bottom: .75rem;
+}
+.fcard-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: .35rem 0;
+  border-bottom: 1px solid var(--c-border);
+}
+.fcard-row:last-of-type { border-bottom: none }
+.fcard-name { font-size: .72rem; color: var(--c-muted) }
+.fcard-val {
+  font-size: 1.1rem;
+  font-weight: 500;
+  font-family: var(--font-mono);
+}
+.trend { font-size: .65rem; margin-left: .2rem }
+.trend-up { color: var(--aqi-bad) }
+.trend-dn { color: var(--aqi-good) }
+.fcard-badge {
+  margin-top: .65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: .65rem;
+  font-weight: 600;
+}
+
+/* ── CHART ──────────────────────────────────────────── */
+.chart-wrap {
+  margin-bottom: 1.5rem;
+}
+.chart-inner { padding: 1rem 1.25rem 1.25rem }
+canvas { width: 100% !important }
+
+/* ── MONITORING GRID ────────────────────────────────── */
+.monitoring-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .85rem;
+  margin-bottom: .85rem;
+}
+@media(max-width:700px){ .monitoring-grid{ grid-template-columns:1fr } }
+
+.monitoring-grid .card img {
+  width: 100%; display: block;
+}
+.card-full { margin-bottom: 1.5rem }
+.card-full video { width: 100%; display: block }
+
+/* ── LEGEND ─────────────────────────────────────────── */
+.legend {
+  background: var(--c-surface2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: .85rem 1.1rem;
+  margin-bottom: 1.5rem;
+  transition: background .3s;
+}
+.legend-title {
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+  margin-bottom: .65rem;
+}
+.legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .65rem 1.25rem;
+}
+.legend-item {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .72rem; color: var(--c-sub);
+}
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 3px; flex-shrink: 0;
+}
+
+/* ── FOOTER ─────────────────────────────────────────── */
+.footer {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--c-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+.footer-item { font-size: .68rem; color: var(--c-muted); font-family: var(--font-mono) }
+
+/* ── UTILS ──────────────────────────────────────────── */
+.mb-1 { margin-bottom: 1.5rem }
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <h1 id="h-title">Toshkent — Havo Sifati Prognozi</h1>
+      <p id="h-coord">41.2995°N 69.2401°E · O'zbekiston</p>
+    </div>
+    <div class="header-right">
+      <div class="live"><span></span><span id="h-time">--:-- UTC+5</span></div>
+      <div class="lang">
+        <button class="active" onclick="setLang('uz')">UZ</button>
+        <button onclick="setLang('ru')">RU</button>
+        <button onclick="setLang('en')">EN</button>
+      </div>
+      <button class="theme-btn" onclick="toggleTheme()" title="Tema">🌙</button>
+    </div>
+  </header>
+
+  <!-- CURRENT -->
+  <div class="slabel" id="l-current">Joriy holat</div>
+  <div class="current-grid" id="current-grid"></div>
+
+  <!-- ALERT -->
+  <div id="alert-area" class="mb-1"></div>
+
+  <!-- FORECAST -->
+  <div class="slabel" id="l-forecast">Prognoz</div>
+  <div class="forecast-grid" id="forecast-grid"></div>
+
+  <!-- CHART -->
+  <div class="slabel" id="l-trend">24 soatlik trend</div>
+  <div class="card chart-wrap mb-1">
+    <div class="chart-inner">
+      <canvas id="chart" height="110"></canvas>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend mb-1">
+    <div class="legend-title" id="l-legend">O'zbekiston SanPiN me'yorlari</div>
+    <div class="legend-items" id="legend-items"></div>
+  </div>
+
+  <!-- MONITORING -->
+  <div class="slabel" id="l-monitoring">Satellite monitoring</div>
+  <div class="monitoring-grid mb-1">
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-hd-title"><span class="dot"></span><span id="l-tropomi">TROPOMI / Sentinel-5P — UV Aerosol Index</span></div>
+        <div class="card-hd-meta" id="l-tropomi-meta">NRTI · Kunlik</div>
+      </div>
+      <img src="tropomi_today.png" alt="TROPOMI UVAI"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+           style="width:100%;display:block">
+      <div style="display:none;align-items:center;justify-content:center;height:180px;color:var(--c-muted);font-size:.8rem">
+        Rasm yuklanmadi
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-hd-title"><span class="dot"></span><span id="l-sentinel">Sentinel-3 OLCI — True Color RGB</span></div>
+        <div class="card-hd-meta" id="l-sentinel-meta">Composite · Kunlik</div>
+      </div>
+      <img src="sentinel3_today.png" alt="Sentinel-3 RGB"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+           style="width:100%;display:block">
+      <div style="display:none;align-items:center;justify-content:center;height:180px;color:var(--c-muted);font-size:.8rem">
+        Rasm yuklanmadi
+      </div>
+    </div>
+  </div>
+
+  <!-- CAMS -->
+  <div class="card card-full mb-1">
+    <div class="card-hd">
+      <div class="card-hd-title"><span class="dot"></span><span id="l-cams">CAMS ECMWF — Chang konsentratsiyasi (5 kunlik prognoz)</span></div>
+      <div class="card-hd-meta" id="l-cams-meta">Har 12 soatda yangilanadi</div>
+    </div>
+    <video controls autoplay loop muted>
+      <source src="../dust_5day.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-item" id="f-model">Model: XGBoost delta · v2 · R²=0.924 (PM2.5 T+1h)</div>
+    <div class="footer-item" id="f-sanpin">SanPiN: PM10≤50 µg/m³ · PM2.5≤35 µg/m³</div>
+    <div class="footer-item" id="f-updated">Yangilangan: <span id="f-time">--</span></div>
+  </footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+// ── TRANSLATIONS ─────────────────────────────────────
+const T = {
+  uz: {
+    title:       "Toshkent — Havo Sifati Prognozi",
+    current:     "Joriy holat",
+    forecast:    "Prognoz",
+    trend:       "24 soatlik trend",
+    legend:      "O'zbekiston SanPiN me'yorlari",
+    monitoring:  "Satellite monitoring",
+    metrics: {
+      pm10:  "PM10", pm25: "PM2.5",
+      wind:  "Shamol", temp: "Harorat", hum: "Namlik"
+    },
+    wind_note:   "Chirchiq vodiysi yo'nalishi",
+    inv_weak:    "Inversiya: zayif",
+    inv_strong:  "Inversiya: kuchli",
+    t1: "+1 soat", t3: "+3 soat", t6: "+6 soat",
+    levels: {
+      good:      "Yaxshi",
+      moderate:  "O'rtacha",
+      sensitive: "Sezgirlarga zararli",
+      bad:       "Zararli",
+      hazard:    "Juda xavfli"
+    },
+    alerts: {
+      good:      { title: "Havo toza",                     desc: "Barcha faoliyat uchun xavfsiz. Tashqarida bo'lish mumkin." },
+      moderate:  { title: "O'rtacha daraja",               desc: "SanPiN chegarasiga yaqin. Uzoq vaqt tashqarida bo'lishni cheklang." },
+      sensitive: { title: "Ehtiyot bo'ling",               desc: "Nafas yo'llari kasalligi bo'lganlarga tashqi faoliyat tavsiya etilmaydi." },
+      bad:       { title: "Ogohlantirish — PM yuqori",     desc: "SanPiN me'yoridan oshdi. Tashqi faoliyatni cheklang." },
+      hazard:    { title: "XAVFLI — Ekstremal ifloslanuv", desc: "PM darajasi SanPiN me'yoridan 4x oshdi. Tashqariga chiqmang." }
+    },
+    tropomi:      "TROPOMI / Sentinel-5P — UV Aerosol Index",
+    tropomi_meta: "NRTI · Kunlik",
+    sentinel:     "Sentinel-3 OLCI — True Color RGB",
+    sentinel_meta:"Composite · Kunlik",
+    cams:         "CAMS ECMWF — Chang konsentratsiyasi (5 kunlik prognoz)",
+    cams_meta:    "Har 12 soatda yangilanadi",
+    updated:      "Yangilangan",
+    sanpin:       "SanPiN: PM10≤50 µg/m³ · PM2.5≤35 µg/m³",
+    model_info:   "Model: XGBoost delta · v2 · R²=0.924 (PM2.5 T+1h)"
+  },
+  ru: {
+    title:       "Ташкент — Прогноз качества воздуха",
+    current:     "Текущее состояние",
+    forecast:    "Прогноз",
+    trend:       "24-часовой тренд",
+    legend:      "Нормы СанПиН Узбекистана",
+    monitoring:  "Спутниковый мониторинг",
+    metrics: {
+      pm10:  "PM10", pm25: "PM2.5",
+      wind:  "Ветер", temp: "Температура", hum: "Влажность"
+    },
+    wind_note:   "Направление долины Чирчик",
+    inv_weak:    "Инверсия: слабая",
+    inv_strong:  "Инверсия: сильная",
+    t1: "+1 час", t3: "+3 часа", t6: "+6 часов",
+    levels: {
+      good:      "Хорошо",
+      moderate:  "Умеренно",
+      sensitive: "Вредно для чувствительных",
+      bad:       "Вредно",
+      hazard:    "Опасно"
+    },
+    alerts: {
+      good:      { title: "Воздух чистый",                       desc: "Безопасно для всех видов деятельности." },
+      moderate:  { title: "Умеренный уровень",                   desc: "Близко к норме СанПиН. Ограничьте длительное пребывание на улице." },
+      sensitive: { title: "Осторожно",                           desc: "Не рекомендуется для людей с заболеваниями дыхательных путей." },
+      bad:       { title: "Предупреждение — уровень PM высокий", desc: "Превышение нормы СанПиН. Ограничьте пребывание на улице." },
+      hazard:    { title: "ОПАСНО — Экстремальное загрязнение",  desc: "Уровень PM превысил норму СанПиН в 4 раза. Не выходите на улицу." }
+    },
+    tropomi:      "TROPOMI / Sentinel-5P — УФ аэрозольный индекс",
+    tropomi_meta: "NRTI · Ежедневно",
+    sentinel:     "Sentinel-3 OLCI — Натуральный цвет RGB",
+    sentinel_meta:"Композит · Ежедневно",
+    cams:         "CAMS ECMWF — Концентрация пыли (прогноз 5 дней)",
+    cams_meta:    "Обновляется каждые 12 часов",
+    updated:      "Обновлено",
+    sanpin:       "СанПиН: PM10≤50 µg/m³ · PM2.5≤35 µg/m³",
+    model_info:   "Модель: XGBoost delta · v2 · R²=0.924 (PM2.5 T+1h)"
+  },
+  en: {
+    title:       "Tashkent — Air Quality Forecast",
+    current:     "Current conditions",
+    forecast:    "Forecast",
+    trend:       "24-hour trend",
+    legend:      "Uzbekistan SanPiN standards",
+    monitoring:  "Satellite monitoring",
+    metrics: {
+      pm10:  "PM10", pm25: "PM2.5",
+      wind:  "Wind", temp: "Temperature", hum: "Humidity"
+    },
+    wind_note:   "Chirchiq valley direction",
+    inv_weak:    "Inversion: weak",
+    inv_strong:  "Inversion: strong",
+    t1: "+1 hour", t3: "+3 hours", t6: "+6 hours",
+    levels: {
+      good:      "Good",
+      moderate:  "Moderate",
+      sensitive: "Unhealthy for sensitive",
+      bad:       "Unhealthy",
+      hazard:    "Hazardous"
+    },
+    alerts: {
+      good:      { title: "Air is clean",                        desc: "Safe for all outdoor activities." },
+      moderate:  { title: "Moderate level",                      desc: "Near SanPiN limit. Limit prolonged outdoor exposure." },
+      sensitive: { title: "Caution",                             desc: "Outdoor activity not recommended for people with respiratory conditions." },
+      bad:       { title: "Warning — PM level high",             desc: "Exceeds SanPiN standard. Limit outdoor activities." },
+      hazard:    { title: "HAZARDOUS — Extreme pollution",       desc: "PM level exceeds SanPiN standard 4x. Stay indoors." }
+    },
+    tropomi:      "TROPOMI / Sentinel-5P — UV Aerosol Index",
+    tropomi_meta: "NRTI · Daily",
+    sentinel:     "Sentinel-3 OLCI — True Color RGB",
+    sentinel_meta:"Composite · Daily",
+    cams:         "CAMS ECMWF — Dust concentration (5-day forecast)",
+    cams_meta:    "Updated every 12 hours",
+    updated:      "Updated",
+    sanpin:       "SanPiN: PM10≤50 µg/m³ · PM2.5≤35 µg/m³",
+    model_info:   "Model: XGBoost delta · v2 · R²=0.924 (PM2.5 T+1h)"
+  }
+}
+
+// ── AQI ──────────────────────────────────────────────
+const AQI_PM10 = [
+  { max:25,   key:'good',      color:'#22c55e', bg:'#052e16', tbg:'#bbf7d0', tc:'#14532d' },
+  { max:50,   key:'moderate',  color:'#f59e0b', bg:'#1c1400', tbg:'#fef08a', tc:'#713f12' },
+  { max:100,  key:'sensitive', color:'#f97316', bg:'#1c0a00', tbg:'#fed7aa', tc:'#7c2d12' },
+  { max:200,  key:'bad',       color:'#ef4444', bg:'#1c0000', tbg:'#fecaca', tc:'#7f1d1d' },
+  { max:9999, key:'hazard',    color:'#a855f7', bg:'#1a0033', tbg:'#e9d5ff', tc:'#4c1d95' },
+]
+const AQI_PM25 = [
+  { max:15,   key:'good',      color:'#22c55e', bg:'#052e16', tbg:'#bbf7d0', tc:'#14532d' },
+  { max:35,   key:'moderate',  color:'#f59e0b', bg:'#1c1400', tbg:'#fef08a', tc:'#713f12' },
+  { max:75,   key:'sensitive', color:'#f97316', bg:'#1c0a00', tbg:'#fed7aa', tc:'#7c2d12' },
+  { max:150,  key:'bad',       color:'#ef4444', bg:'#1c0000', tbg:'#fecaca', tc:'#7f1d1d' },
+  { max:9999, key:'hazard',    color:'#a855f7', bg:'#1a0033', tbg:'#e9d5ff', tc:'#4c1d95' },
+]
+function classify(val, thr) { return thr.find(t => val < t.max) || thr[thr.length-1] }
+function worst(pm10, pm25) {
+  const order = ['good','moderate','sensitive','bad','hazard']
+  const a = classify(pm10, AQI_PM10), b = classify(pm25, AQI_PM25)
+  return order.indexOf(a.key) >= order.indexOf(b.key) ? a : b
+}
+function isDark() { return document.body.dataset.theme !== 'light' }
+function bgColor(cls) { return isDark() ? cls.bg : cls.tbg }
+function txColor(cls) { return isDark() ? cls.color : cls.tc }
+
+// ── SAMPLE DATA ───────────────────────────────────────
+const DATA = {
+  now:  { pm10:87, pm25:34, wind:3.2, wind_dir:'NE', temp:28, hum:52, inversion:'weak' },
+  f1:   { pm10:102, pm25:39 },
+  f3:   { pm10:128, pm25:47 },
+  f6:   { pm10:115, pm25:42 },
+  prob: { 1:0.31, 3:0.58, 6:0.44 },
+}
+const PM10_24H = [72,68,65,70,78,85,87,92,102,112,120,128,125,118,110,105,98,90,85,80,78,75,72,70]
+const PM25_24H = [28,26,24,26,30,33,34,37,39,43,46,47,46,44,41,40,38,35,33,31,30,29,28,27]
+const HOURS    = Array.from({length:24},(_,i)=>i+':00')
+
+// ── STATE ─────────────────────────────────────────────
+let lang = 'uz'
+let chart = null
+
+// ── RENDER ───────────────────────────────────────────
+function render() {
+  const t   = T[lang]
+  const now = new Date()
+  const pad = n => String(n).padStart(2,'0')
+  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())} UTC+5`
+
+  // Header
+  document.getElementById('h-title').textContent   = t.title
+  document.getElementById('h-time').textContent    = timeStr
+  document.getElementById('f-time').textContent    = timeStr
+  document.getElementById('l-current').textContent = t.current
+  document.getElementById('l-forecast').textContent= t.forecast
+  document.getElementById('l-trend').textContent   = t.trend
+  document.getElementById('l-legend').textContent  = t.legend
+  document.getElementById('l-monitoring').textContent = t.monitoring
+  document.getElementById('l-tropomi').textContent = t.tropomi
+  document.getElementById('l-tropomi-meta').textContent = t.tropomi_meta
+  document.getElementById('l-sentinel').textContent = t.sentinel
+  document.getElementById('l-sentinel-meta').textContent = t.sentinel_meta
+  document.getElementById('l-cams').textContent    = t.cams
+  document.getElementById('l-cams-meta').textContent = t.cams_meta
+  document.getElementById('f-model').textContent   = t.model_info
+  document.getElementById('f-sanpin').textContent  = t.sanpin
+  document.getElementById('f-updated').innerHTML   = `${t.updated}: <span id="f-time">${timeStr}</span>`
+
+  // Current grid
+  const pm10cls = classify(DATA.now.pm10, AQI_PM10)
+  const pm25cls = classify(DATA.now.pm25, AQI_PM25)
+  const pct10   = Math.min(DATA.now.pm10 / 200 * 100, 100)
+  const pct25   = Math.min(DATA.now.pm25 / 100 * 100, 100)
+
+  document.getElementById('current-grid').innerHTML = `
+    <div class="metric">
+      <div class="metric-label">${t.metrics.pm10}</div>
+      <div class="metric-value" style="color:${pm10cls.color}">${DATA.now.pm10}</div>
+      <div class="metric-unit">µg/m³ · SanPiN: 50</div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:${pct10}%;background:${pm10cls.color}"></div></div>
+      <div class="metric-badge" style="background:${bgColor(pm10cls)};color:${txColor(pm10cls)}">${t.levels[pm10cls.key]}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">${t.metrics.pm25}</div>
+      <div class="metric-value" style="color:${pm25cls.color}">${DATA.now.pm25}</div>
+      <div class="metric-unit">µg/m³ · SanPiN: 35</div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:${pct25}%;background:${pm25cls.color}"></div></div>
+      <div class="metric-badge" style="background:${bgColor(pm25cls)};color:${txColor(pm25cls)}">${t.levels[pm25cls.key]}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">${t.metrics.wind}</div>
+      <div class="metric-value" style="font-size:1.4rem">${DATA.now.wind}</div>
+      <div class="metric-unit">m/s · ${DATA.now.wind_dir}</div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:${DATA.now.wind/15*100}%;background:var(--c-accent)"></div></div>
+      <div class="metric-badge" style="background:var(--c-surface2);color:var(--c-sub)">${t.wind_note}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">${t.metrics.temp}</div>
+      <div class="metric-value">${DATA.now.temp}</div>
+      <div class="metric-unit">°C</div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:${(DATA.now.temp+10)/60*100}%;background:#f59e0b"></div></div>
+      <div class="metric-badge" style="background:var(--c-surface2);color:var(--c-sub)">${DATA.now.inversion === 'weak' ? t.inv_weak : t.inv_strong}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">${t.metrics.hum}</div>
+      <div class="metric-value">${DATA.now.hum}</div>
+      <div class="metric-unit">%</div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:${DATA.now.hum}%;background:#38bdf8"></div></div>
+      <div class="metric-badge" style="background:var(--c-surface2);color:var(--c-sub)">Open-Meteo · bias corrected</div>
+    </div>
+  `
+
+  // Alert
+  const wcls = worst(DATA.now.pm10, DATA.now.pm25)
+  const alertInfo = t.alerts[wcls.key]
+  const alertIcons = { good:'✅', moderate:'⚠️', sensitive:'⚠️', bad:'🚨', hazard:'🚨' }
+  document.getElementById('alert-area').innerHTML = `
+    <div class="alert" style="background:${bgColor(wcls)};border-color:${wcls.color}40">
+      <div class="alert-icon">${alertIcons[wcls.key]}</div>
+      <div>
+        <div class="alert-title" style="color:${txColor(wcls)}">${alertInfo.title}</div>
+        <div class="alert-desc">${alertInfo.desc}</div>
+      </div>
+    </div>
+  `
+
+  // Forecast
+  const fdata = [
+    { key:'f1', label:t.t1, d:DATA.f1, prob:DATA.prob[1] },
+    { key:'f3', label:t.t3, d:DATA.f3, prob:DATA.prob[3] },
+    { key:'f6', label:t.t6, d:DATA.f6, prob:DATA.prob[6] },
+  ]
+  document.getElementById('forecast-grid').innerHTML = fdata.map(f => {
+    const fc10 = classify(f.d.pm10, AQI_PM10)
+    const fc25 = classify(f.d.pm25, AQI_PM25)
+    const fw   = worst(f.d.pm10, f.d.pm25)
+    const tr10 = f.d.pm10 > DATA.now.pm10 ? `<span class="trend trend-up">▲</span>` : `<span class="trend trend-dn">▼</span>`
+    const tr25 = f.d.pm25 > DATA.now.pm25 ? `<span class="trend trend-up">▲</span>` : `<span class="trend trend-dn">▼</span>`
+    const probPct = Math.round(f.prob * 100)
+    return `
+      <div class="fcard" style="border-color:${fw.color}50">
+        <div class="fcard-time">${f.label}</div>
+        <div class="fcard-row">
+          <span class="fcard-name">PM10</span>
+          <span class="fcard-val" style="color:${fc10.color}">${f.d.pm10}${tr10}</span>
+        </div>
+        <div class="fcard-row">
+          <span class="fcard-name">PM2.5</span>
+          <span class="fcard-val" style="color:${fc25.color}">${f.d.pm25}${tr25}</span>
+        </div>
+        <div class="fcard-row" style="border-bottom:none">
+          <span class="fcard-name">P(ekstremal)</span>
+          <span class="fcard-val" style="font-size:.85rem;color:${probPct>50?'#ef4444':'var(--c-muted)'}">${probPct}%</span>
+        </div>
+        <div class="fcard-badge" style="background:${bgColor(fw)};color:${txColor(fw)}">${t.levels[fw.key]}</div>
+      </div>
+    `
+  }).join('')
+
+  // Legend
+  const levels = ['good','moderate','sensitive','bad','hazard']
+  const colors = ['#22c55e','#f59e0b','#f97316','#ef4444','#a855f7']
+  document.getElementById('legend-items').innerHTML = levels.map((k,i) =>
+    `<div class="legend-item">
+      <div class="legend-dot" style="background:${colors[i]}"></div>
+      ${t.levels[k]}
+    </div>`
+  ).join('')
+
+  // Chart
+  renderChart(t)
+}
+
+function renderChart(t) {
+  const ctx = document.getElementById('chart').getContext('2d')
+  const isDk = isDark()
+  const gridColor   = isDk ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'
+  const tickColor   = isDk ? '#475569' : '#94a3b8'
+  const tooltipBg   = isDk ? '#1a2235' : '#ffffff'
+  const tooltipText = isDk ? '#e2e8f0' : '#0f172a'
+
+  if (chart) chart.destroy()
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: HOURS,
+      datasets: [
+        {
+          label: 'PM10',
+          data: PM10_24H,
+          borderColor: '#38bdf8',
+          backgroundColor: 'rgba(56,189,248,.06)',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: .4,
+          fill: true
+        },
+        {
+          label: 'PM2.5',
+          data: PM25_24H,
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34,197,94,.05)',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: .4,
+          fill: true
+        },
+        {
+          label: 'SanPiN PM10',
+          data: new Array(24).fill(50),
+          borderColor: '#f59e0b',
+          borderWidth: 1,
+          borderDash: [4,3],
+          pointRadius: 0,
+          fill: false
+        },
+        {
+          label: 'SanPiN PM2.5',
+          data: new Array(24).fill(35),
+          borderColor: '#f97316',
+          borderWidth: 1,
+          borderDash: [4,3],
+          pointRadius: 0,
+          fill: false
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: {
+          labels: { color:tickColor, font:{ size:11 }, boxWidth:12, padding:16 }
+        },
+        tooltip: {
+          backgroundColor: tooltipBg,
+          titleColor: tooltipText,
+          bodyColor: tickColor,
+          borderColor: isDk ? '#1e2d45' : '#e2e8f0',
+          borderWidth: 1,
+          callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y} µg/m³` }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color:tickColor, font:{size:10}, maxTicksLimit:8 },
+          grid:  { color:gridColor, lineWidth:.5 }
+        },
+        y: {
+          ticks: { color:tickColor, font:{size:10}, callback: v => v+' µg' },
+          grid:  { color:gridColor, lineWidth:.5 }
+        }
+      }
+    }
+  })
+}
+
+// ── LANG ─────────────────────────────────────────────
+function setLang(l) {
+  lang = l
+  document.querySelectorAll('.lang button').forEach(b => {
+    b.classList.toggle('active', b.textContent === l.toUpperCase())
+  })
+  render()
+}
+
+// ── THEME ────────────────────────────────────────────
+function toggleTheme() {
+  const body = document.body
+  const isDk = body.dataset.theme !== 'light'
+  body.dataset.theme = isDk ? 'light' : 'dark'
+  document.querySelector('.theme-btn').textContent = isDk ? '🌙' : '☀️'
+  render()
+}
+
+// ── CLOCK ────────────────────────────────────────────
+function updateTime() {
+  const now = new Date()
+  const pad = n => String(n).padStart(2,'0')
+  const s = `${pad(now.getHours())}:${pad(now.getMinutes())} UTC+5`
+  const el = document.getElementById('h-time')
+  if (el) el.textContent = s
+}
+setInterval(updateTime, 30000)
+
+// ── INIT ─────────────────────────────────────────────
+render()
+</script>
+</body>
+</html>
